@@ -3,7 +3,7 @@ import pandas as pd
 
 # Set up page config
 st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
-st.title("🧪 Live Lab Asset Management Dashboard")
+st.title("🧪 SC Live Lab Asset Management Dashboard")
 st.markdown("---")
 
 # --- GOOGLE SHEETS LIVE CONNECTION LAYER ---

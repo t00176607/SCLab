@@ -1,20 +1,25 @@
 import streamlit as st
-import json
 import pandas as pd
 
 # Set up page config
-st.set_page_config(page_title="South Campus Lab Asset Dashboard", layout="wide")
-st.title("🧪 South Campus Lab Asset Management Dashboard")
+st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
+st.title("🧪 Live Lab Asset Management Dashboard")
 st.markdown("---")
 
-# Load JSON data
-try:
-    with open("SC Lab.json", "r") as f:
-        data = json.load(f)
-    df = pd.DataFrame(data)
-except FileNotFoundError:
-    st.error("Could not find 'SC Lab.json'. Please ensure it's in the same directory.")
-    st.stop()
+# --- GOOGLE SHEETS LIVE CONNECTION LAYER ---
+# Your exact Google Sheet URL formatted for raw CSV transmission
+SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/gviz/tq?tqx=out:csv"
+
+@st.cache_data(ttl=60) # Refreshes data automatically every 60 seconds
+def load_live_data(url):
+    # Pulls the live rows directly from the Google Sheets backend
+    return pd.read_csv(url)
+
+with st.spinner("Fetching latest asset matrix from live database..."):
+    df = load_live_data(SHEET_CSV_URL)
+
+# Fill any blank spreadsheet cells gracefully
+df.fillna("Unknown", inplace=True)
 
 # --- SIDEBAR FILTERS ---
 st.sidebar.header("Filter Options")
@@ -41,9 +46,7 @@ st.markdown("---")
 
 # --- MAIN DATA DISPLAY ---
 st.subheader("📋 Asset Inventory List")
-# Clean columns for display
-display_df = filtered_df[["asset_name", "manufacturer", "model_serial_number", "physical_condition", "location_tag", "timestamp"]]
-st.dataframe(display_df, use_container_width=True)
+st.dataframe(filtered_df, use_container_width=True)
 
 # --- DETAILED CONDITION AUDITING CARD ---
 st.markdown("---")
@@ -51,5 +54,4 @@ st.subheader("🔍 Maintenance & Status Logs")
 for idx, row in filtered_df.iterrows():
     with st.expander(f"{row['asset_name']} ({row['manufacturer']} {row['model_serial_number']})"):
         st.write(f"📍 **Location:** {row['location_tag']}")
-        st.write(f"⏱️ **Video Scan Timestamp:** `{row['timestamp']}`")
         st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")

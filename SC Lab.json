@@ -1,0 +1,122 @@
+[
+  {
+    "asset_name": "Rework and Soldering Station",
+    "manufacturer": "Yihua",
+    "model_serial_number": "853D",
+    "physical_condition": "Used, functional markings visible, power cables attached, dial controls intact",
+    "location_tag": "Workbench Top - Section 1",
+    "timestamp": "00:56"
+  },
+  {
+    "asset_name": "Hot Air Rework Station / Desoldering Station",
+    "manufacturer": "Duratool",
+    "model_serial_number": "Unknown (Tagged 11 and 22)",
+    "physical_condition": "Used, display panel clear, dual power switches intact",
+    "location_tag": "Workbench Top - Section 1",
+    "timestamp": "01:00"
+  },
+  {
+    "asset_name": "Temperature Controlled Soldering Iron",
+    "manufacturer": "Antex",
+    "model_serial_number": "660 TC (Base: TC 50 / TC 25 / TC 15)",
+    "physical_condition": "Used, yellow casing shows cosmetic staining, slide temperature adjustment functional",
+    "location_tag": "Workbench Top - Section 1",
+    "timestamp": "01:03"
+  },
+  {
+    "asset_name": "Weller Soldering Iron Stand",
+    "manufacturer": "Weller",
+    "model_serial_number": "Unknown (Base marked ESD Safe)",
+    "physical_condition": "Used, heavy solder crusting on the brass/sponge tray cleaning area",
+    "location_tag": "Workbench Top - Section 1",
+    "timestamp": "01:05"
+  },
+  {
+    "asset_name": "Industrial Asset Tag / Transponder",
+    "manufacturer": "TheTagFactory",
+    "model_serial_number": "Unknown",
+    "physical_condition": "Excellent, unused or clean blue casing",
+    "location_tag": "Workbench Top - Section 2",
+    "timestamp": "01:27"
+  },
+  {
+    "asset_name": "DHL RoSA Logistics Tracker / Transponder",
+    "manufacturer": "ALPS ALPINE EUROPE GmbH (Produced for Deutsche Post DHL)",
+    "model_serial_number": "Lykaner 5 R1 (DOT), ID: 01B1A0D8 / 02689765 / 013148CE",
+    "physical_condition": "Good, multiple units, barcode and QR codes legible, frequency marked at 868MHz, CE certified",
+    "location_tag": "Workbench Top - Section 2",
+    "timestamp": "01:18"
+  },
+  {
+    "asset_name": "Kynar Wire Spools (Black & Blue)",
+    "manufacturer": "Farnell / Pro-Power",
+    "model_serial_number": "100-30BK-FAR (30AWG Black) / 100-28B-FAR (28AWG Blue)",
+    "physical_condition": "Partially used spools stored in an open cardboard box",
+    "location_tag": "Filing Cabinet - Drawer 1 Side Storage",
+    "timestamp": "00:22"
+  },
+  {
+    "asset_name": "3D Printing Filament",
+    "manufacturer": "BASF (Innopil3D)",
+    "model_serial_number": "Unknown",
+    "physical_condition": "New in box / Spooled",
+    "location_tag": "Filing Cabinet - Drawer 2",
+    "timestamp": "01:56"
+  },
+  {
+    "asset_name": "Crimp Tool Kit & Insulated Terminals Box",
+    "manufacturer": "RS Components",
+    "model_serial_number": "534-828 (Individual components like 534-339, 534-575)",
+    "physical_condition": "Organized kit, plastic case intact, lid contains replacement schematic labeled March 1991",
+    "location_tag": "Filing Cabinet - Drawer 3",
+    "timestamp": "02:21"
+  },
+  {
+    "asset_name": "Insulated Terminal Assortment Box",
+    "manufacturer": "Unknown",
+    "model_serial_number": "Unknown",
+    "physical_condition": "Clear plastic multi-compartment case containing red, blue, and yellow crimp terminals",
+    "location_tag": "Filing Cabinet - Drawer 3",
+    "timestamp": "02:31"
+  },
+  {
+    "asset_name": "Graphit 33 Conductive Coating Spray",
+    "manufacturer": "Kontakt Chemie",
+    "model_serial_number": "Art. No. 131-6174 / 75003",
+    "physical_condition": "Aerosol can intact, label legible, safety markings clear",
+    "location_tag": "Filing Cabinet - Drawer 3",
+    "timestamp": "02:12"
+  },
+  {
+    "asset_name": "Industrial 3-Phase High-Current Power Plug",
+    "manufacturer": "Unknown",
+    "model_serial_number": "Unknown (IP44 Rated, 380-415V Red/White)",
+    "physical_condition": "Good, heavy-duty industrial plastic casing fully intact",
+    "location_tag": "Filing Cabinet - Drawer 3",
+    "timestamp": "02:41"
+  },
+  {
+    "asset_name": "Alienware Gaming Keyboard",
+    "manufacturer": "Dell / Alienware",
+    "model_serial_number": "Unknown",
+    "physical_condition": "Fair, dusty, visually confirmed missing keycap on backslash key above Enter",
+    "location_tag": "Filing Cabinet - Drawer 4",
+    "timestamp": "02:52"
+  },
+  {
+    "asset_name": "SiF4oO Smart Factory Training System Controller",
+    "manufacturer": "Unknown (Handwritten IP configs on chassis)",
+    "model_serial_number": "SiF4oO Base Unit",
+    "physical_condition": "Used, dark gray housing, functions as the base enclosure holding active documentation",
+    "location_tag": "Top Shelf Storage",
+    "timestamp": "01:06"
+  },
+  {
+    "asset_name": "Spartan-3 FPGA Development Board",
+    "manufacturer": "Xilinx",
+    "model_serial_number": "Spartan-3 Generation",
+    "physical_condition": "Exposed PCB assembly, clean components, stored statically on top of training unit",
+    "location_tag": "Top Shelf Storage",
+    "timestamp": "01:06"
+  }
+]

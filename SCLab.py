@@ -1,26 +1,30 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+from datetime import datetime
 
-# Set up page config
+# Page Configuration
 st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
 
-# --- GOOGLE SHEETS LIVE CONNECTION LAYER ---
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/gviz/tq?tqx=out:csv"
-TOKENS_CSV_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/gviz/tq?tqx=out:csv&sheet=AccessTokens"
+# ==========================================
+# --- SECURE GSHEETS CONNECTION LAYER ---
+# ==========================================
+# Connect using the secrets configured in your Streamlit Cloud settings
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=60) # Auto-refreshes data every 60 seconds
-def load_live_data(url):
-    return pd.read_csv(url)
+@st.cache_data(ttl=60)
+def load_live_data():
+    # Pull 'Sheet1' (Main Inventory) and 'AccessTokens' tabs securely
+    df_inv = conn.read(worksheet="Sheet1")
+    df_tok = conn.read(worksheet="AccessTokens")
+    return df_inv, df_tok
 
-with st.spinner("Validating secure credentials..."):
-    df_inventory = load_live_data(SHEET_CSV_URL)
-    df_tokens = load_live_data(TOKENS_CSV_URL)
+with st.spinner("Authenticating live connection..."):
+    df_inventory, df_tokens = load_live_data()
 
-# Fill blank cells cleanly
+# Clean up dataframes
 df_inventory.fillna("Unknown", inplace=True)
 df_tokens.fillna("Unknown", inplace=True)
-
-# Standardize column headers (strips spaces and forces lowercase)
 df_inventory.columns = df_inventory.columns.str.strip().str.lower()
 df_tokens.columns = df_tokens.columns.str.strip().str.lower()
 
@@ -31,7 +35,7 @@ df_tokens.columns = df_tokens.columns.str.strip().str.lower()
 url_params = st.query_params
 
 if "token" not in url_params:
-    st.error("🔒 Access Denied: A valid authorization token is required to view assets.")
+    st.error("🔒 Access Denied: A valid authorization token is required.")
     st.stop()
 
 user_token = str(url_params["token"]).strip()
@@ -41,41 +45,76 @@ if matching_row.empty:
     st.error("❌ Invalid or Expired Authorization Token.")
     st.stop()
 
-# Pulls 'C124' or 'Chem Vault' out of the token tab's first column
 authorized_room = matching_row.iloc[0]["location_tag"]
 
 
 # ==========================================
-# --- APPLICATION RUNTIME (AUTHORIZED) ---
+# --- APP UI & READ CONTAINER ---
 # ==========================================
 st.title("🧪 SC Live Lab Asset Management Dashboard")
-st.caption(f"Securely authenticated session for Room: **{authorized_room}**")
+st.caption(f"Secure session active for Room: **{authorized_room}**")
 st.markdown("---")
 
-# Filter the inventory sheet strictly by the room column matching the token's room
+# Isolate items for this room only
 filtered_df = df_inventory[df_inventory["room_tag"] == authorized_room]
 
-# --- KEY PERFORMANCE METRICS ---
-total_assets = len(filtered_df)
-unique_manufacturers = filtered_df["manufacturer"].nunique()
-
+# Metrics
 col1, col2 = st.columns(2)
 with col1:
-    st.metric(label="Total Tracked Assets", value=total_assets)
+    st.metric(label="Total Tracked Assets", value=len(filtered_df))
 with col2:
-    st.metric(label="Distinct Manufacturers", value=unique_manufacturers)
+    st.metric(label="Distinct Manufacturers", value=filtered_df["manufacturer"].nunique())
 
 st.markdown("---")
-
-# --- MAIN DATA DISPLAY ---
 st.subheader(f"📋 Asset Inventory List — Room {authorized_room}")
 st.dataframe(filtered_df, use_container_width=True)
 
-# --- DETAILED CONDITION AUDITING CARD ---
+
+# ==========================================
+# --- SECURE WRITE-BACK DATA LAYER ---
+# ==========================================
+st.markdown("---")
+with st.expander("➕ Add New Asset to this Room"):
+    with st.form("new_asset_form", clear_on_submit=True):
+        st.write("Logged assets are automatically tagged to your current authorized space.")
+        
+        # User input fields
+        new_name = st.text_input("Asset Name*")
+        new_manuf = st.text_input("Manufacturer*")
+        new_serial = st.text_input("Model / Serial Number")
+        new_loc = st.text_input("Specific Placement (e.g., Workbench 1, Drawer B)")
+        new_cond = st.selectbox("Physical Condition", ["New", "Used", "Fair", "Needs Maintenance"])
+        
+        submit_button = st.form_submit_button("Save Asset to Live Matrix")
+        
+        if submit_button:
+            if not new_name or not new_manuf:
+                st.error("Asset Name and Manufacturer fields are mandatory.")
+            else:
+                # Format the row to match the spreadsheet structure exactly
+                new_row = pd.DataFrame([{
+                    "asset_name": new_name,
+                    "manufacturer": new_manuf,
+                    "model_serial_number": new_serial if new_serial else "Unknown",
+                    "physical_condition": new_cond,
+                    "room_tag": authorized_room, # Auto-injected to block cross-room errors
+                    "location_tag": new_loc if new_loc else "Unassigned",
+                    "timestamp": datetime.now().strftime("%H:%M")
+                }])
+                
+                # Append the row to the existing spreadsheet using the secure API connection
+                updated_df = pd.concat([df_inventory, new_row], ignore_index=True)
+                conn.update(worksheet="Sheet1", data=updated_df)
+                
+                st.success(f"Successfully added '{new_name}' to the live master matrix!")
+                st.cache_data.clear() # Clear cache to instantly show the new row on refresh
+                st.rerun()
+
+
+# --- MAINTENANCE LOG EXPANDERS ---
 st.markdown("---")
 st.subheader("🔍 Maintenance & Status Logs")
 for idx, row in filtered_df.iterrows():
     with st.expander(f"{row['asset_name']} ({row['manufacturer']} {row['model_serial_number']})"):
         st.write(f"📍 **Specific Placement:** {row['location_tag']}")
-        st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")
         st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")

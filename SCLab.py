@@ -12,11 +12,14 @@ st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
 # Connect using the secrets configured in your Streamlit Cloud settings
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# Define your master spreadsheet URL explicitly
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
+
 @st.cache_data(ttl=60)
 def load_live_data():
-    # Pull 'Sheet1' (Main Inventory) and 'AccessTokens' tabs securely
-    df_inv = conn.read(worksheet="Sheet1")
-    df_tok = conn.read(worksheet="AccessTokens")
+    # Pass the SPREADSHEET_URL parameter directly into the connection
+    df_inv = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
+    df_tok = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="AccessTokens")
     return df_inv, df_tok
 
 with st.spinner("Authenticating live connection..."):

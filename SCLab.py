@@ -52,7 +52,7 @@ authorized_room = matching_row.iloc[0]["location_tag"]
 
 
 # ==========================================
-# --- APP UI & READ CONTAINER ---
+# --- APP UI & READ/EDIT CONTAINER ---
 # ==========================================
 st.title("🧪 SC Live Lab Asset Management Dashboard")
 st.caption(f"Secure session active for Room: **{authorized_room}**")
@@ -70,7 +70,40 @@ with col2:
 
 st.markdown("---")
 st.subheader(f"📋 Asset Inventory List — Room {authorized_room}")
-st.dataframe(filtered_df, use_container_width=True)
+st.caption("💡 Double-click any cell to edit details directly. Click 'Save Table Changes' below to update the live spreadsheet.")
+
+# Render the interactive spreadsheet editor widget
+# 'room_tag' and 'timestamp' are disabled to maintain structural data boundaries
+edited_df = st.data_editor(
+    filtered_df, 
+    use_container_width=True,
+    disabled=["room_tag", "timestamp"], 
+    key="inventory_editor"
+)
+
+# Save Button for Cell Changes
+if st.button("💾 Save Table Changes"):
+    with st.spinner("Syncing your updates to the live master matrix..."):
+        # Pull absolute latest copy from Google Sheets to ensure no cross-room data drops
+        df_latest_master, _ = load_live_data()
+        df_latest_master.fillna("Unknown", inplace=True)
+        df_latest_master.columns = df_latest_master.columns.str.strip().str.lower()
+        
+        # Pull out rows belonging to OTHER rooms to preserve them
+        other_rooms_df = df_latest_master[df_latest_master["room_tag"] != authorized_room]
+        
+        # Merge untouched room rows with your newly modified room rows
+        final_updated_master = pd.concat([other_rooms_df, edited_df], ignore_index=True)
+        
+        # Force column formatting alignment before push
+        final_updated_master = final_updated_master[df_inventory.columns]
+        
+        # Overwrite the spreadsheet cleanly via secure API execution
+        conn.update(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1", data=final_updated_master)
+        
+        st.success("Table changes successfully synchronized!")
+        st.cache_data.clear() # Erase data view cache
+        st.rerun()            # Hard reload application UI
 
 
 # ==========================================
@@ -100,24 +133,27 @@ with st.expander("➕ Add New Asset to this Room"):
                     "manufacturer": new_manuf,
                     "model_serial_number": new_serial if new_serial else "Unknown",
                     "physical_condition": new_cond,
-                    "room_tag": authorized_room, # Auto-injected to block cross-room errors
+                    "room_tag": authorized_room, 
                     "location_tag": new_loc if new_loc else "Unassigned",
                     "timestamp": datetime.now().strftime("%H:%M")
                 }])
                 
                 # Append the row to the existing spreadsheet using the secure API connection
                 updated_df = pd.concat([df_inventory, new_row], ignore_index=True)
-                conn.update(worksheet="Sheet1", data=updated_df)
+                
+                # Added explicit SPREADSHEET_URL to prevent ValueError crashes
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1", data=updated_df)
                 
                 st.success(f"Successfully added '{new_name}' to the live master matrix!")
-                st.cache_data.clear() # Clear cache to instantly show the new row on refresh
+                st.cache_data.clear() 
                 st.rerun()
 
 
 # --- MAINTENANCE LOG EXPANDERS ---
 st.markdown("---")
 st.subheader("🔍 Maintenance & Status Logs")
-for idx, row in filtered_df.iterrows():
+# Switched from filtered_df to edited_df so logs update instantly on-screen while typing
+for idx, row in edited_df.iterrows():
     with st.expander(f"{row['asset_name']} ({row['manufacturer']} {row['model_serial_number']})"):
         st.write(f"📍 **Specific Placement:** {row['location_tag']}")
         st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")

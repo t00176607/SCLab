@@ -21,7 +21,7 @@ if "private_key" in raw_config:
     raw_config["private_key"] = raw_config["private_key"].replace("\\n", "\n")
 
 # 3. Instantiate the connection class directly, avoiding fragile factory wrapper routing
-conn = GSheetsConnection(connection_name="gsheets", **raw_config)
+conn = GSheetsConnection(connection_name="gsheets", secrets=raw_config)
 
 # Define master spreadsheet URL explicitly
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"

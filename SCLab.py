@@ -1,20 +1,26 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-# Import the missing connection class to resolve the NameError
 from streamlit_gsheets import GSheetsConnection 
 
-# Page Configuration
+# Page Configuration (Must only be called ONCE at the very top)
 st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
 
 # ==========================================
 # --- SECURE GSHEETS CONNECTION LAYER ---
 # ==========================================
-# Connect using the single-quote literals safely saved in your Streamlit Cloud settings
+# Establish connection to Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Define your master spreadsheet URL explicitly
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
+
+@st.cache_data(ttl=60)
+def load_live_data():
+    # Pass the SPREADSHEET_URL parameter directly into the connection
+    df_inv = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
+    df_tok = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="AccessTokens")
+    return df_inv, df_tok
 
 from datetime import datetime
 

@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 
 # 1. Copy the secrets into a standard mutable dictionary
 secrets_dict = dict(st.secrets["connections"]["gsheets"])
@@ -8,8 +7,8 @@ secrets_dict = dict(st.secrets["connections"]["gsheets"])
 if "private_key" in secrets_dict:
     secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
 
-# 3. Pass the configuration dictionary explicitly using the keyword argument
-conn = st.connection("gsheets", type=GSheetsConnection, kwargs=secrets_dict)
+# 3. Pass unpacked arguments to the generic string connection name
+conn = st.connection("gsheets", **secrets_dict)
 
 import pandas as pd
 from datetime import datetime

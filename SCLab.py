@@ -33,17 +33,37 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yW
 
 @st.cache_data(ttl=60)
 def load_live_data():
-    # Open spreadsheet directly by URL using the gspread client
-    spreadsheet = gc.open_by_url(SPREADSHEET_URL)
-    
-    # Grab structural worksheets
-    sheet_inv = spreadsheet.worksheet("Sheet1")
-    sheet_tok = spreadsheet.worksheet("AccessTokens")
-    
-    # Parse records dynamically into standard Pandas DataFrames
-    df_inv = pd.DataFrame(sheet_inv.get_all_records())
-    df_tok = pd.DataFrame(sheet_tok.get_all_records())
-    return df_inv, df_tok
+    try:
+        # Open the spreadsheet workbook structure
+        spreadsheet = gc.open_by_url(SPREADSHEET_URL)
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error("❌ **Critical Error:** The master Google Spreadsheet could not be found. Please verify that the URL is correct and hasn't been deleted.")
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ **Connection Error:** Failed to communicate with Google Sheets: {e}")
+        st.stop()
+
+    # Safely extract individual worksheets
+    try:
+        sheet_inv = spreadsheet.worksheet("Sheet1")
+    except gspread.exceptions.WorksheetNotFound:
+        st.error("❌ **Structural Database Error:** The worksheet tab named **'Sheet1'** was not found. It may have been renamed or deleted inside Google Sheets.")
+        st.stop()
+
+    try:
+        sheet_tok = spreadsheet.worksheet("AccessTokens")
+    except gspread.exceptions.WorksheetNotFound:
+        st.error("❌ **Structural Database Error:** The worksheet tab named **'AccessTokens'** was not found. The system cannot authenticate users without this configuration layout.")
+        st.stop()
+
+    # If sheets exist, safely read the records into DataFrames
+    try:
+        df_inv = pd.DataFrame(sheet_inv.get_all_records())
+        df_tok = pd.DataFrame(sheet_tok.get_all_records())
+        return df_inv, df_tok
+    except Exception as parse_err:
+        st.error(f"❌ **Data Parsing Error:** Failed to read rows from the spreadsheet. Check for corrupted rows or empty column headers: {parse_err}")
+        st.stop()
 
 
 with st.spinner("Authenticating live connection..."):

@@ -1,4 +1,8 @@
 import streamlit as st
+# Ensure Python reads the raw string literals cleanly as real newlines
+if "private_key" in st.secrets["connections"]["gsheets"]:
+    raw_key = st.secrets["connections"]["gsheets"]["private_key"]
+    st.secrets["connections"]["gsheets"]["private_key"] = raw_key.replace("\\n", "\n")
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime

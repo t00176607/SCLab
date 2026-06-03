@@ -1,22 +1,21 @@
 import streamlit as st
-import gspread
 import pandas as pd
+from datetime import datetime
+# Import the missing connection class to resolve the NameError
+from streamlit_gsheets import GSheetsConnection 
 
-# 1. Grab your freshly saved secrets block
-creds_dict = dict(st.secrets["connections"]["gsheets"])
+# Page Configuration
+st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
 
-# 2. Fix the string literals for the brand-new key
-if "private_key" in creds_dict:
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+# ==========================================
+# --- SECURE GSHEETS CONNECTION LAYER ---
+# ==========================================
+# Connect using the single-quote literals safely saved in your Streamlit Cloud settings
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 3. Direct authentication via gspread (Bypassing st.connection completely)
-try:
-    gc = gspread.service_account_from_dict(creds_dict)
-except Exception as e:
-    st.error(f"Authentication failed at the cryptography layer: {e}")
-    st.stop()
+# Define your master spreadsheet URL explicitly
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
 
-import pandas as pd
 from datetime import datetime
 
 # Page Configuration

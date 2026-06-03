@@ -3,42 +3,33 @@ import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection 
 
-# Page Configuration (Must only be called ONCE at the very top)
+# ==========================================
+# --- PAGE CONFIGURATION ---
+# ==========================================
 st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
+
 
 # ==========================================
 # --- SECURE GSHEETS CONNECTION LAYER ---
 # ==========================================
-# Establish connection to Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Define your master spreadsheet URL explicitly
+# 1. Safely extract raw connection configurations out of the immutable TOML wrapper
+raw_config = dict(st.secrets["connections"]["gsheets"])
+
+# 2. Force evaluate escaped character literals into structural newlines for RSA verification
+if "private_key" in raw_config:
+    raw_config["private_key"] = raw_config["private_key"].replace("\\n", "\n")
+
+# 3. Instantiate the connection class directly, avoiding fragile factory wrapper routing
+conn = GSheetsConnection(connection_name="gsheets", **raw_config)
+
+# Define master spreadsheet URL explicitly
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
+
 
 @st.cache_data(ttl=60)
 def load_live_data():
-    # Pass the SPREADSHEET_URL parameter directly into the connection
-    df_inv = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
-    df_tok = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="AccessTokens")
-    return df_inv, df_tok
-
-from datetime import datetime
-
-# Page Configuration
-st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
-
-# ==========================================
-# --- SECURE GSHEETS CONNECTION LAYER ---
-# ==========================================
-# Connect using the secrets configured in your Streamlit Cloud settings
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# Define your master spreadsheet URL explicitly
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
-
-@st.cache_data(ttl=60)
-def load_live_data():
-    # Pass the SPREADSHEET_URL parameter directly into the connection
+    # Pass the SPREADSHEET_URL parameter directly into the connection instance
     df_inv = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
     df_tok = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="AccessTokens")
     return df_inv, df_tok
@@ -94,7 +85,6 @@ st.subheader(f"📋 Asset Inventory List — Room {authorized_room}")
 st.caption("💡 Double-click any cell to edit details directly. Click 'Save Table Changes' below to update the live spreadsheet.")
 
 # Render the interactive spreadsheet editor widget
-# 'room_tag' and 'timestamp' are disabled to maintain structural data boundaries
 edited_df = st.data_editor(
     filtered_df, 
     use_container_width=True,
@@ -135,46 +125,4 @@ with st.expander("➕ Add New Asset to this Room"):
     with st.form("new_asset_form", clear_on_submit=True):
         st.write("Logged assets are automatically tagged to your current authorized space.")
         
-        # User input fields
-        new_name = st.text_input("Asset Name*")
-        new_manuf = st.text_input("Manufacturer*")
-        new_serial = st.text_input("Model / Serial Number")
-        new_loc = st.text_input("Specific Placement (e.g., Workbench 1, Drawer B)")
-        new_cond = st.selectbox("Physical Condition", ["New", "Used", "Fair", "Needs Maintenance"])
-        
-        submit_button = st.form_submit_button("Save Asset to Live Matrix")
-        
-        if submit_button:
-            if not new_name or not new_manuf:
-                st.error("Asset Name and Manufacturer fields are mandatory.")
-            else:
-                # Format the row to match the spreadsheet structure exactly
-                new_row = pd.DataFrame([{
-                    "asset_name": new_name,
-                    "manufacturer": new_manuf,
-                    "model_serial_number": new_serial if new_serial else "Unknown",
-                    "physical_condition": new_cond,
-                    "room_tag": authorized_room, 
-                    "location_tag": new_loc if new_loc else "Unassigned",
-                    "timestamp": datetime.now().strftime("%H:%M")
-                }])
-                
-                # Append the row to the existing spreadsheet using the secure API connection
-                updated_df = pd.concat([df_inventory, new_row], ignore_index=True)
-                
-                # Added explicit SPREADSHEET_URL to prevent ValueError crashes
-                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1", data=updated_df)
-                
-                st.success(f"Successfully added '{new_name}' to the live master matrix!")
-                st.cache_data.clear() 
-                st.rerun()
-
-
-# --- MAINTENANCE LOG EXPANDERS ---
-st.markdown("---")
-st.subheader("🔍 Maintenance & Status Logs")
-# Switched from filtered_df to edited_df so logs update instantly on-screen while typing
-for idx, row in edited_df.iterrows():
-    with st.expander(f"{row['asset_name']} ({row['manufacturer']} {row['model_serial_number']})"):
-        st.write(f"📍 **Specific Placement:** {row['location_tag']}")
-        st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")
+        # User

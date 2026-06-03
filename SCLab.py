@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection 
+import gspread
 
 # ==========================================
 # --- PAGE CONFIGURATION ---
@@ -13,15 +13,19 @@ st.set_page_config(page_title="Lab Asset Dashboard", layout="wide")
 # --- SECURE GSHEETS CONNECTION LAYER ---
 # ==========================================
 
-# 1. Safely extract raw connection configurations out of the immutable TOML wrapper
-raw_config = dict(st.secrets["connections"]["gsheets"])
+# 1. Safely extract connection configurations out of the read-only TOML block
+creds_dict = dict(st.secrets["connections"]["gsheets"])
 
-# 2. Force evaluate escaped character literals into structural newlines for RSA verification
-if "private_key" in raw_config:
-    raw_config["private_key"] = raw_config["private_key"].replace("\\n", "\n")
+# 2. Force evaluate escaped character literals into real structural newlines
+if "private_key" in creds_dict:
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 
-# 3. Instantiate the connection class directly, avoiding fragile factory wrapper routing
-conn = GSheetsConnection(connection_name="gsheets", secrets=raw_config)
+# 3. Connect directly via gspread backend, cutting out the fragile wrapper layer
+try:
+    gc = gspread.service_account_from_dict(creds_dict)
+except Exception as e:
+    st.error(f"❌ Critical Backend Authentication Failure: {e}")
+    st.stop()
 
 # Define master spreadsheet URL explicitly
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yWo_sD9unOq_j8dYUP0wQMxg/"
@@ -29,10 +33,18 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vN4IFkM2xlzA0G8oLV6yW
 
 @st.cache_data(ttl=60)
 def load_live_data():
-    # Pass the SPREADSHEET_URL parameter directly into the connection instance
-    df_inv = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
-    df_tok = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="AccessTokens")
+    # Open spreadsheet directly by URL using the gspread client
+    spreadsheet = gc.open_by_url(SPREADSHEET_URL)
+    
+    # Grab structural worksheets
+    sheet_inv = spreadsheet.worksheet("Sheet1")
+    sheet_tok = spreadsheet.worksheet("AccessTokens")
+    
+    # Parse records dynamically into standard Pandas DataFrames
+    df_inv = pd.DataFrame(sheet_inv.get_all_records())
+    df_tok = pd.DataFrame(sheet_tok.get_all_records())
     return df_inv, df_tok
+
 
 with st.spinner("Authenticating live connection..."):
     df_inventory, df_tokens = load_live_data()
@@ -109,12 +121,17 @@ if st.button("💾 Save Table Changes"):
         # Force column formatting alignment before push
         final_updated_master = final_updated_master[df_inventory.columns]
         
-        # Overwrite the spreadsheet cleanly via secure API execution
-        conn.update(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1", data=final_updated_master)
-        
-        st.success("Table changes successfully synchronized!")
-        st.cache_data.clear() # Erase data view cache
-        st.rerun()            # Hard reload application UI
+        # Overwrite spreadsheet worksheet records cleanly via direct API call
+        try:
+            sheet_target = gc.open_by_url(SPREADSHEET_URL).worksheet("Sheet1")
+            sheet_target.clear()
+            # Write columns header followed by rows values
+            sheet_target.update([final_updated_master.columns.values.tolist()] + final_updated_master.values.tolist())
+            st.success("Table changes successfully synchronized!")
+            st.cache_data.clear() 
+            st.rerun()            
+        except Exception as write_err:
+            st.error(f"Database sync failed: {write_err}")
 
 
 # ==========================================
@@ -125,4 +142,46 @@ with st.expander("➕ Add New Asset to this Room"):
     with st.form("new_asset_form", clear_on_submit=True):
         st.write("Logged assets are automatically tagged to your current authorized space.")
         
-        # User
+        # User input fields
+        new_name = st.text_input("Asset Name*")
+        new_manuf = st.text_input("Manufacturer*")
+        new_serial = st.text_input("Model / Serial Number")
+        new_loc = st.text_input("Specific Placement (e.g., Workbench 1, Drawer B)")
+        new_cond = st.selectbox("Physical Condition", ["New", "Used", "Fair", "Needs Maintenance"])
+        
+        submit_button = st.form_submit_button("Save Asset to Live Matrix")
+        
+        if submit_button:
+            if not new_name or not new_manuf:
+                st.error("Asset Name and Manufacturer fields are mandatory.")
+            else:
+                # Format new row data structure
+                new_row = [
+                    new_name,
+                    new_manuf,
+                    new_serial if new_serial else "Unknown",
+                    new_cond,
+                    authorized_room,
+                    new_loc if new_loc else "Unassigned",
+                    datetime.now().strftime("%H:%M")
+                ]
+                
+                try:
+                    sheet_target = gc.open_by_url(SPREADSHEET_URL).worksheet("Sheet1")
+                    sheet_target.append_row(new_row)
+                    st.success(f"Successfully added '{new_name}' to the live master matrix!")
+                    st.cache_data.clear() 
+                    st.rerun()
+                except Exception as append_err:
+                    st.error(f"Failed to append asset row: {append_err}")
+
+
+# ==========================================
+# --- MAINTENANCE LOG EXPANDERS ---
+# ==========================================
+st.markdown("---")
+st.subheader("🔍 Maintenance & Status Logs")
+for idx, row in edited_df.iterrows():
+    with st.expander(f"{row['asset_name']} ({row['manufacturer']} {row['model_serial_number']})"):
+        st.write(f"📍 **Specific Placement:** {row['location_tag']}")
+        st.write(f"⚙️ **Physical Condition Notes:** {row['physical_condition']}")

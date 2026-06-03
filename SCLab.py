@@ -1,15 +1,19 @@
 import streamlit as st
+import gspread
 
-# 1. Copy the secrets into a standard mutable dictionary
-secrets_dict = dict(st.secrets["connections"]["gsheets"])
+# 1. Copy the immutable secrets to a mutable dictionary
+creds_dict = dict(st.secrets["connections"]["gsheets"])
 
-# 2. Fix the escaped string literals dynamically
-if "private_key" in secrets_dict:
-    secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
+# 2. Fix the string literal newlines safely
+if "private_key" in creds_dict:
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 
-# 3. Pass unpacked arguments to the generic string connection name
-conn = st.connection("gsheets", **secrets_dict)
-
+# 3. Authenticate directly using the standard Google OAuth library structure
+try:
+    gc = gspread.service_account_from_dict(creds_dict)
+except Exception as e:
+    st.error(f"Authentication failed at the cryptography layer: {e}")
+    st.stop()
 import pandas as pd
 from datetime import datetime
 

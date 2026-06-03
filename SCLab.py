@@ -1,15 +1,15 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-# 1. Copy the immutable secrets into a standard, mutable dictionary
+# 1. Copy the secrets into a standard mutable dictionary
 secrets_dict = dict(st.secrets["connections"]["gsheets"])
 
 # 2. Fix the escaped string literals dynamically
 if "private_key" in secrets_dict:
     secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
 
-# 3. Explicitly pass the corrected dictionary configuration to the connection
-conn = st.connection("gsheets", type=GSheetsConnection, **secrets_dict)
+# 3. Pass the configuration dictionary explicitly using the keyword argument
+conn = st.connection("gsheets", type=GSheetsConnection, kwargs=secrets_dict)
 
 import pandas as pd
 from datetime import datetime
